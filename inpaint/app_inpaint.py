@@ -3,7 +3,7 @@ import torch
 
 from diffusers import AutoPipelineForInpainting, UNet2DConditionModel
 import diffusers
-# from share_btn import community_icon_html, loading_icon_html, share_js
+from inpaint.share import community_icon_html, loading_icon_html, share_js
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 pipe = AutoPipelineForInpainting.from_pretrained("diffusers/stable-diffusion-xl-1.0-inpainting-0.1", torch_dtype=torch.float16, variant="fp16").to(device)
@@ -39,7 +39,7 @@ def predict(dict, prompt="", negative_prompt="", guidance_scale=7.5, steps=20, s
 
 
 css = '''
-.gradio-container{max-width: 1300px !important}
+.gradio-container{max-width: 1100px !important, margin-left: auto, margin-right: auto }
 #image_upload{min-height:400px}
 #image_upload [data-testid="image"], #image_upload [data-testid="image"] > div{min-height: 400px}
 #mask_radio .gr-form{background:transparent; border: none}
@@ -75,66 +75,16 @@ div#share-btn-container > div {flex-direction: row;background: black;align-items
 #image_upload{border-bottom-left-radius: 0px;border-bottom-right-radius: 0px}
 '''
 
-
-theme = gr.themes.Soft(
-    primary_hue="teal",
-    secondary_hue="gray",
-).set(
-    body_text_color_dark='*neutral_800',
-    background_fill_primary_dark='*neutral_50',
-    background_fill_secondary_dark='*neutral_50',
-    border_color_accent_dark='*primary_300',
-    border_color_primary_dark='*neutral_200',
-    color_accent_soft_dark='*neutral_50',
-    link_text_color_dark='*secondary_600',
-    link_text_color_active_dark='*secondary_600',
-    link_text_color_hover_dark='*secondary_700',
-    link_text_color_visited_dark='*secondary_500',
-    # code_background_fill_dark='*neutral_100',
-    shadow_spread_dark='6px',
-    block_background_fill_dark='white',
-    block_label_background_fill_dark='*primary_100',
-    block_label_text_color_dark='*primary_500',
-    block_title_text_color_dark='*primary_500',
-    checkbox_background_color_dark='*background_fill_primary',
-    checkbox_background_color_selected_dark='*primary_600',
-    checkbox_border_color_dark='*neutral_100',
-    checkbox_border_color_focus_dark='*primary_500',
-    checkbox_border_color_hover_dark='*neutral_300',
-    checkbox_border_color_selected_dark='*primary_600',
-    checkbox_label_background_fill_selected_dark='*primary_500',
-    checkbox_label_text_color_selected_dark='white',
-    error_background_fill_dark='#fef2f2',
-    error_border_color_dark='#b91c1c',
-    error_text_color_dark='#b91c1c',
-    error_icon_color_dark='#b91c1c',
-    input_background_fill_dark='white',
-    input_background_fill_focus_dark='*secondary_500',
-    input_border_color_dark='*neutral_50',
-    input_border_color_focus_dark='*secondary_300',
-    input_placeholder_color_dark='*neutral_400',
-    slider_color_dark='*primary_500',
-    stat_background_fill_dark='*primary_300',
-    table_border_color_dark='*neutral_300',
-    table_even_background_fill_dark='white',
-    table_odd_background_fill_dark='*neutral_50',
-    button_primary_background_fill_dark='*primary_500',
-    button_primary_background_fill_hover_dark='*primary_400',
-    button_primary_border_color_dark='*primary_00',
-    button_secondary_background_fill_dark='whiite',
-    button_secondary_background_fill_hover_dark='*neutral_100',
-    button_secondary_border_color_dark='*neutral_200',
-    button_secondary_text_color_dark='*neutral_800'
-)
-
-image_blocks = gr.Blocks(css=css, theme=theme, elem_id="total-container")
+image_blocks = gr.Blocks(css=css, elem_id="total-container")
 
 def create_inpaint_demo() -> gr.Blocks:
   with image_blocks as demo:
-      # gr.HTML(read_content("header.html"))
+      # gr.HTML(read_content("inpaint/header.html"))
+      gr.Markdown("# Edit the Image")
+      gr.Markdown("Use the brush tool to mask out the areas you want to edit")
       with gr.Row():
                   with gr.Column():
-                      image = gr.Image(source='upload', tool='sketch', elem_id="image_upload", type="pil", label="Upload",height=400)
+                      image = gr.Image(source='upload', tool='sketch', elem_id="image_upload", type="pil", label="Upload",height=500, width=500)
                       with gr.Row(elem_id="prompt-container", mobile_collapse=False, equal_height=True):
                           with gr.Row():
                               prompt = gr.Textbox(placeholder="Your prompt (what you want in place of what is erased)", show_label=False, elem_id="prompt")
@@ -151,16 +101,16 @@ def create_inpaint_demo() -> gr.Blocks:
                               scheduler = gr.Dropdown(label="Schedulers", choices=schedulers, value="EulerDiscreteScheduler")
                           
                   with gr.Column():
-                      image_out = gr.Image(label="Output", elem_id="output-img", height=400)
-                      # with gr.Group(elem_id="share-btn-container", visible=False) as share_btn_container:
-                      #     community_icon = gr.HTML(community_icon_html)
-                      #     loading_icon = gr.HTML(loading_icon_html)
-                      #     share_button = gr.Button("Share to community", elem_id="share-btn",visible=True)
+                      image_out = gr.Image(label="Output", elem_id="output-img", height=500, width=500)
+                      with gr.Group(elem_id="share-btn-container", visible=False) as share_btn_container:
+                          community_icon = gr.HTML(community_icon_html)
+                          loading_icon = gr.HTML(loading_icon_html)
+                          share_button = gr.Button("Share to community", elem_id="share-btn",visible=True)
               
 
-      btn.click(fn=predict, inputs=[image, prompt, negative_prompt, guidance_scale, steps, strength, scheduler], outputs=[image_out], api_name='run')
-      prompt.submit(fn=predict, inputs=[image, prompt, negative_prompt, guidance_scale, steps, strength, scheduler], outputs=[image_out])
-      # share_button.click(None, [], [], _js=share_js)
+      btn.click(fn=predict, inputs=[image, prompt, negative_prompt, guidance_scale, steps, strength, scheduler], outputs=[image_out, share_btn_container], api_name='run')
+      prompt.submit(fn=predict, inputs=[image, prompt, negative_prompt, guidance_scale, steps, strength, scheduler], outputs=[image_out, share_btn_container])
+      share_button.click(None, [], [], _js=share_js)
 
       # gr.Examples(
       #             examples=[
@@ -188,5 +138,6 @@ def create_inpaint_demo() -> gr.Blocks:
           """
       )
   return demo
+
 
 # image_blocks.queue(max_size=25).launch()
